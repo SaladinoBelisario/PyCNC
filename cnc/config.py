@@ -3,8 +3,8 @@
 
 # Maximum velocity for each axis in millimeter per minute.
 MAX_VELOCITY_MM_PER_MIN_X = 24000
-MAX_VELOCITY_MM_PER_MIN_Y = 12000
-MAX_VELOCITY_MM_PER_MIN_Z = 600
+MAX_VELOCITY_MM_PER_MIN_Y = 24000
+MAX_VELOCITY_MM_PER_MIN_Z = 2000
 MAX_VELOCITY_MM_PER_MIN_E = 1500
 MIN_VELOCITY_MM_PER_MIN = 1
 # Average velocity for endstop calibration procedure
@@ -13,8 +13,8 @@ CALIBRATION_VELOCITY_MM_PER_MIN = 300
 # Stepper motors steps per millimeter for each axis.
 STEPPER_PULSES_PER_MM_X = 100
 STEPPER_PULSES_PER_MM_Y = 100
-STEPPER_PULSES_PER_MM_Z = 400
-STEPPER_PULSES_PER_MM_E = 150
+STEPPER_PULSES_PER_MM_Z = 200
+STEPPER_PULSES_PER_MM_E = 100
 
 # Invert axises direction, by default(False) high level means increase of
 # position. For inverted(True) axis, high level means decrease of position.
@@ -86,9 +86,12 @@ INSTANT_RUN = True
 
 # If this parameter is False, error will be raised on command with velocity
 # more than maximum velocity specified here. If this parameter is True,
-# velocity would be decreased(proportional for all axises) to fit the maximum
+# velocity would be decreased(proportional for all axes) to fit the maximum
 # velocity.
 AUTO_VELOCITY_ADJUSTMENT = True
 
 # Automatically turn on fan when extruder is heating, boolean value.
 AUTO_FAN_ON = True
+
+# Default exact stop mode for the machine
+EXACT_STOP_ON = False
