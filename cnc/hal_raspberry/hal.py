@@ -6,6 +6,7 @@ from cnc.config import *
 from cnc.sensors import thermistor
 
 US_IN_SECONDS = 1000000
+ONE_HUNDRED_MS_IN_US = 100000
 
 gpio = rpgpio.GPIO()
 dma = rpgpio.DMAGPIO()
@@ -49,7 +50,7 @@ def spindle_control(percent):
     """ Spindle control implementation.
     :param percent: spindle speed in percent 0..100. If 0, stop the spindle.
     """
-    logging.info("spindle control: {}%".format(percent))
+    logging.info("Spindle control: {}%".format(percent))
     if percent > 0:
         pwm.add_pin(SPINDLE_PWM_PIN, percent)
     else:
@@ -106,7 +107,7 @@ def get_bed_temperature():
 def disable_steppers():
     """ Disable all steppers until any movement occurs.
     """
-    logging.info("disable steppers")
+    logging.info("Disable steppers")
     gpio.set(STEPPERS_ENABLE_PIN)
 
 
@@ -203,7 +204,7 @@ def calibrate(x, y, z):
     """
     # enable steppers
     gpio.clear(STEPPERS_ENABLE_PIN)
-    logging.info("hal calibrate, x={}, y={}, z={}".format(x, y, z))
+    logging.info("HAL calibrate, x={}, y={}, z={}".format(x, y, z))
     if not __calibrate_private(x, y, z, True):  # move from endstop switch
         return False
     return __calibrate_private(x, y, z, False)  # move to endstop switch
@@ -218,7 +219,7 @@ def move(generator):
     # powerful enough to calculate buffer in advance, faster then machine
     # moving. In this case machine would safely paused between commands until
     # calculation is done.
-
+    
     # enable steppers
     gpio.clear(STEPPERS_ENABLE_PIN)
     # 4 control blocks per 32 bytes
@@ -285,13 +286,14 @@ def move(generator):
         prev = k + STEPPER_PULSE_LENGTH_US
         # instant run handling
         if not is_ran and instant and current_cb is None:
-            if k - k0 > 100000:  # wait at least 100 ms is uploaded
+            if k - k0 > ONE_HUNDRED_MS_IN_US:  # wait at least 100 ms is uploaded
                 nt = time.time() - st
                 ng = (k - k0) / 1000000.0
                 if nt > ng:
-                    logging.warn("Buffer preparing for instant run took more "
-                                 "time then buffer time"
-                                 " {}/{}".format(nt, ng))
+                    logging.warning("Buffer preparing for instant run took more "
+                                    "time than buffer time"
+                                    " {}/{}".format(nt, ng))
+                    logging.warning("Changing to buffer mode")
                     instant = False
                 else:
                     dma.run_stream()
@@ -306,15 +308,15 @@ def move(generator):
     else:
         # stream mode can be activated only if previous command was finished.
         dma.finalize_stream()
-
-    logging.info("prepared in " + str(round(pt - st, 2)) + "s, estimated in "
+    
+    logging.info("Prepared in " + str(round(pt - st, 2)) + "s, estimated in "
                  + str(round(generator.total_time_s(), 2)) + "s")
 
 
 def join():
     """ Wait till motors work.
     """
-    logging.info("hal join()")
+    logging.info("HAL join()")
     # wait till dma works
     while dma.is_active():
         time.sleep(0.01)

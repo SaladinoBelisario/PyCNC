@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import os
 import sys
-import readline
+from pyreadline3 import Readline
 import atexit
+from utils import definitions
 
 import cnc.logging_config as logging_config
 from cnc.gcode import GCode, GCodeException
@@ -16,7 +16,9 @@ except NameError:
     raw_input = input
 
 # configure history file for interactive mode
-history_file = os.path.join(os.environ['HOME'], '.pycnc_history')
+history_file = definitions.HISTORY_LOG_DIR
+
+readline = Readline()
 try:
     readline.read_history_file(history_file)
 except IOError:
@@ -42,7 +44,7 @@ def do_line(line):
 
 
 def main():
-    logging_config.debug_disable()
+    logging_config.debug_enable()
     try:
         if len(sys.argv) > 1:
             # Read file with gcode

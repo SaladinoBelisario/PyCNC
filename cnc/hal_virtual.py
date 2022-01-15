@@ -12,14 +12,14 @@ from cnc.config import *
 def init():
     """ Initialize GPIO pins and machine itself.
     """
-    logging.info("initialize hal")
+    logging.info("Initialize HAL")
 
 
 def spindle_control(percent):
     """ Spindle control implementation 0..100.
     :param percent: Spindle speed in percent.
     """
-    logging.info("spindle control: {}%".format(percent))
+    logging.info("Spindle control: {}%".format(percent))
 
 
 def fan_control(on_off):
@@ -27,9 +27,9 @@ def fan_control(on_off):
     :param on_off: boolean value if fan is enabled.
     """
     if on_off:
-        logging.info("Fan is on")
+        logging.info("Fan is ON")
     else:
-        logging.info("Fan is off")
+        logging.info("Fan is OFF")
 
 
 # noinspection PyUnusedLocal
@@ -65,7 +65,7 @@ def get_bed_temperature():
 def disable_steppers():
     """ Disable all steppers until any movement occurs.
     """
-    logging.info("hal disable steppers")
+    logging.info("HAL disable steppers")
 
 
 def calibrate(x, y, z):
@@ -76,7 +76,7 @@ def calibrate(x, y, z):
     :param z: boolean, True to calibrate Z axis.
     :return: boolean, True if all specified end stops were triggered.
     """
-    logging.info("hal calibrate, x={}, y={}, z={}".format(x, y, z))
+    logging.info("HAL calibrate, x={}, y={}, z={}".format(x, y, z))
     return True
 
 
@@ -95,6 +95,7 @@ def move(generator):
     st = time.time()
     direction_found = False
     for direction, tx, ty, tz, te in generator:
+        logging.info("{},{},{},{},{}".format(direction, tx, ty, tz, te))
         if direction:
             direction_found = True
             direction_x, direction_y, direction_z, direction_e = tx, ty, tz, te
@@ -124,7 +125,7 @@ def move(generator):
             cx += 1
             if lx is not None:
                 dx = tx - lx
-                assert dx > 0, "negative or zero time delta detected for x"
+                assert dx > 0, "Negative or zero time delta detected for x"
             lx = tx
         else:
             dx = None
@@ -136,7 +137,7 @@ def move(generator):
             cy += 1
             if ly is not None:
                 dy = ty - ly
-                assert dy > 0, "negative or zero time delta detected for y"
+                assert dy > 0, "Negative or zero time delta detected for y"
             ly = ty
         else:
             dy = None
@@ -148,7 +149,7 @@ def move(generator):
             cz += 1
             if lz is not None:
                 dz = tz - lz
-                assert dz > 0, "negative or zero time delta detected for z"
+                assert dz > 0, "Negative or zero time delta detected for z"
             lz = tz
         else:
             dz = None
@@ -160,7 +161,7 @@ def move(generator):
             ce += 1
             if le is not None:
                 de = te - le
-                assert de > 0, "negative or zero time delta detected for e"
+                assert de > 0, "Negative or zero time delta detected for e"
             le = te
         else:
             de = None
@@ -168,34 +169,34 @@ def move(generator):
         # logging.debug("Iteration {} is {} {} {} {}".
         #               format(max(ix, iy, iz, ie), tx, ty, tz, te))
         f = list(x for x in (tx, ty, tz, te) if x is not None)
-        assert f.count(f[0]) == len(f), "fast forwarded pulse detected"
+        assert f.count(f[0]) == len(f), "Fast forwarded pulse detected"
     pt = time.time()
-    assert direction_found, "direction not found"
+    assert direction_found, "Direction not found"
     assert round(ix / STEPPER_PULSES_PER_MM_X, 10) == delta.x,\
-        "x wrong number of pulses"
+        "X wrong number of pulses"
     assert round(iy / STEPPER_PULSES_PER_MM_Y, 10) == delta.y,\
-        "y wrong number of pulses"
+        "Y wrong number of pulses"
     assert round(iz / STEPPER_PULSES_PER_MM_Z, 10) == delta.z, \
-        "z wrong number of pulses"
+        "Z wrong number of pulses"
     assert round(ie / STEPPER_PULSES_PER_MM_E, 10) == delta.e, \
-        "e wrong number of pulses"
+        "E wrong number of pulses"
     assert max(mx, my, mz, me) <= generator.total_time_s(), \
-        "interpolation time or pulses wrong"
+        "Interpolation time or pulses wrong"
     logging.debug("Moved {}, {}, {}, {} iterations".format(ix, iy, iz, ie))
-    logging.info("prepared in " + str(round(pt - st, 2)) + "s, estimated "
+    logging.info("Prepared in " + str(round(pt - st, 2)) + "s, estimated "
                  + str(round(generator.total_time_s(), 2)) + "s")
 
 
 def join():
     """ Wait till motors work.
     """
-    logging.info("hal join()")
+    logging.info("HAL join()")
 
 
 def deinit():
     """ De-initialise.
     """
-    logging.info("hal deinit()")
+    logging.info("HAL deinit()")
 
 
 def watchdog_feed():

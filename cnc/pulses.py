@@ -18,7 +18,7 @@ class PulseGenerator(object):
         formulas for distance of uniform movement and accelerated move.
             S = V * Ta = a * Tu^2 / 2
         where Ta - time for accelerated and Tu for uniform movement.
-        Velocity will never be more then Vmax - maximum velocity of all axises.
+        Velocity will never be more then Vmax - maximum velocity of all axes.
         At the point of maximum velocity we change accelerated movement to
         uniform, so we can translate time for accelerated movement with this
         formula:
@@ -49,8 +49,8 @@ class PulseGenerator(object):
         self._delta = delta
 
     def _adjust_velocity(self, velocity_mm_sec):
-        """ Automatically decrease velocity to all axises proportionally if
-        velocity for one or more axises is more then maximum velocity for axis.
+        """ Automatically decrease velocity to all axes proportionally if
+        velocity for one or more axes is more then maximum velocity for axis.
         :param velocity_mm_sec: input velocity.
         :return: adjusted(decreased if needed) velocity.
         """
@@ -58,17 +58,13 @@ class PulseGenerator(object):
             return velocity_mm_sec
         k = 1.0
         if velocity_mm_sec.x * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_X:
-            k = min(k, MAX_VELOCITY_MM_PER_MIN_X
-                    / velocity_mm_sec.x / SECONDS_IN_MINUTE)
+            k = min(k, MAX_VELOCITY_MM_PER_MIN_X/velocity_mm_sec.x/SECONDS_IN_MINUTE)
         if velocity_mm_sec.y * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_Y:
-            k = min(k, MAX_VELOCITY_MM_PER_MIN_Y
-                    / velocity_mm_sec.y / SECONDS_IN_MINUTE)
+            k = min(k, MAX_VELOCITY_MM_PER_MIN_Y/velocity_mm_sec.y/SECONDS_IN_MINUTE)
         if velocity_mm_sec.z * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_Z:
-            k = min(k, MAX_VELOCITY_MM_PER_MIN_Z
-                    / velocity_mm_sec.z / SECONDS_IN_MINUTE)
+            k = min(k, MAX_VELOCITY_MM_PER_MIN_Z/velocity_mm_sec.z/SECONDS_IN_MINUTE)
         if velocity_mm_sec.e * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_E:
-            k = min(k, MAX_VELOCITY_MM_PER_MIN_E
-                    / velocity_mm_sec.e / SECONDS_IN_MINUTE)
+            k = min(k, MAX_VELOCITY_MM_PER_MIN_E/velocity_mm_sec.e/SECONDS_IN_MINUTE)
         if k != 1.0:
             logging.warning("Out of speed, multiply velocity by {}".format(k))
         return velocity_mm_sec * k
@@ -82,7 +78,7 @@ class PulseGenerator(object):
                 linear_time_s: time for uniform movement, it is total movement
                                time minus acceleration and braking time
                 max_axis_velocity_mm_per_sec: maximum axis velocity of all
-                                              axises during movement. Even if
+                                              axes during movement. Even if
                                               whole movement is accelerated,
                                               this value should be calculated
                                               as top velocity.
@@ -143,7 +139,7 @@ class PulseGenerator(object):
         if bt <= 0:
             return t
 
-        # braking
+        # breaking
         # Vmax * Tpseudo = Vlinear * t - a * t^2 / 2
         # V on start braking is Vlinear = Taccel * a = Tbreaking * a
         # Vmax * Tpseudo = Tbreaking * a * t - a * t^2 / 2
@@ -164,7 +160,7 @@ class PulseGenerator(object):
                     - first is boolean value, if it is True, motors direction
                         should be changed and next pulse should performed in
                         this direction.
-                    - values for all machine axises. For direction update,
+                    - values for all machine axes. For direction update,
                         positive values means forward movement, negative value
                         means reverse movement. For normal pulse, values are
                         represent time for the next pulse in microseconds.
@@ -264,23 +260,16 @@ class PulseGeneratorLinear(PulseGenerator):
                                     / STEPPER_MAX_ACCELERATION_MM_PER_S2)
         # check if there is enough space to accelerate and brake, adjust time
         # S = a * t^2 / 2
-        if STEPPER_MAX_ACCELERATION_MM_PER_S2 * self.acceleration_time_s ** 2 \
-                > distance_total_mm:
-            self.acceleration_time_s = \
-                math.sqrt(distance_total_mm
-                          / STEPPER_MAX_ACCELERATION_MM_PER_S2)
+        if STEPPER_MAX_ACCELERATION_MM_PER_S2 * self.acceleration_time_s ** 2 > distance_total_mm:
+            self.acceleration_time_s = math.sqrt(distance_total_mm / STEPPER_MAX_ACCELERATION_MM_PER_S2)
             self.linear_time_s = 0.0
             # V = a * t -> V = 2 * S / t, take half of total distance for
             # acceleration and braking
-            self.max_velocity_mm_per_sec = (distance_mm
-                                            / self.acceleration_time_s)
+            self.max_velocity_mm_per_sec = (distance_mm / self.acceleration_time_s)
         else:
             # calculate linear time
-            linear_distance_mm = distance_total_mm \
-                                 - self.acceleration_time_s ** 2 \
-                                 * STEPPER_MAX_ACCELERATION_MM_PER_S2
-            self.linear_time_s = (linear_distance_mm
-                                  / self.max_velocity_mm_per_sec.length())
+            linear_distance_mm = distance_total_mm - self.acceleration_time_s ** 2 * STEPPER_MAX_ACCELERATION_MM_PER_S2
+            self.linear_time_s = (linear_distance_mm / self.max_velocity_mm_per_sec.length())
         self._total_pulses_x = round(distance_mm.x * STEPPER_PULSES_PER_MM_X)
         self._total_pulses_y = round(distance_mm.y * STEPPER_PULSES_PER_MM_Y)
         self._total_pulses_z = round(distance_mm.z * STEPPER_PULSES_PER_MM_Z)
@@ -373,7 +362,7 @@ class PulseGeneratorCircular(PulseGenerator):
             bpm = STEPPER_PULSES_PER_MM_X
         else:
             raise ValueError("Unknown plane")
-        # adjust radius to fit into axises step.
+        # adjust radius to fit into axes step.
         radius = (round(math.sqrt(sa * sa + sb * sb) * min(apm, bpm))
                   / min(apm, bpm))
         radius_a = (round(math.sqrt(sa * sa + sb * sb) * apm) / apm)

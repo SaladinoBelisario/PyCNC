@@ -1,5 +1,7 @@
 from __future__ import division
 
+import time
+
 import cnc.logging_config as logging_config
 from cnc import hal
 from cnc.pulses import *
@@ -20,7 +22,8 @@ class GMachine(object):
         spindle, extruder etc
     """
     AUTO_FAN_ON = AUTO_FAN_ON
-
+    EXACT_STOP_ON = EXACT_STOP_ON
+    
     def __init__(self):
         """ Initialization.
         """
@@ -37,7 +40,7 @@ class GMachine(object):
         self.reset()
         hal.init()
         self.watchdog = HardwareWatchdog()
-
+    
     def release(self):
         """ Free all resources.
         """
@@ -46,7 +49,7 @@ class GMachine(object):
             self._heaters[h].stop()
         self._fan(False)
         hal.deinit()
-
+    
     def reset(self):
         """ Reinitialize all program configurable thing.
         """
@@ -59,16 +62,16 @@ class GMachine(object):
         self._convertCoordinates = 1.0
         self._absoluteCoordinates = True
         self._plane = PLANE_XY
-
+    
     # noinspection PyMethodMayBeStatic
     def _spindle(self, spindle_speed):
         hal.join()
         hal.spindle_control(100.0 * spindle_speed / SPINDLE_MAX_RPM)
-
+    
     def _fan(self, state):
         hal.fan_control(state)
         self._fan_state = state
-
+    
     def _heat(self, heater, temperature, wait):
         # check if sensor is ok
         if heater == HEATER_EXTRUDER:
@@ -80,11 +83,11 @@ class GMachine(object):
             control = hal.bed_heater_control
             coefficients = BED_PID
         else:
-            raise GMachineException("unknown heater")
+            raise GMachineException("Unknown heater")
         try:
             measure()
         except (IOError, OSError):
-            raise GMachineException("can not measure temperature")
+            raise GMachineException("Cannot measure temperature")
         if heater in self._heaters:
             self._heaters[heater].stop()
             del self._heaters[heater]
@@ -95,22 +98,22 @@ class GMachine(object):
                                            control)
             if wait:
                 self._heaters[heater].wait()
-
+    
     def __check_delta(self, delta):
         pos = self._position + delta
         if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0),
                               Coordinates(TABLE_SIZE_X_MM, TABLE_SIZE_Y_MM,
                                           TABLE_SIZE_Z_MM, 0)):
-            raise GMachineException("out of effective area")
-
+            raise GMachineException("Out of effective area")
+    
     # noinspection PyMethodMayBeStatic
     def __check_velocity(self, max_velocity):
         if max_velocity.x > MAX_VELOCITY_MM_PER_MIN_X \
                 or max_velocity.y > MAX_VELOCITY_MM_PER_MIN_Y \
                 or max_velocity.z > MAX_VELOCITY_MM_PER_MIN_Z \
                 or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_E:
-            raise GMachineException("out of maximum speed")
-
+            raise GMachineException("Out of maximum speed")
+    
     def _move_linear(self, delta, velocity):
         delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
                             1.0 / STEPPER_PULSES_PER_MM_Y,
@@ -119,14 +122,14 @@ class GMachine(object):
         if delta.is_zero():
             return
         self.__check_delta(delta)
-
+        
         logging.info("Moving linearly {}".format(delta))
         gen = PulseGeneratorLinear(delta, velocity)
         self.__check_velocity(gen.max_velocity())
         hal.move(gen)
         # save position
         self._position = self._position + delta
-
+    
     @staticmethod
     def __quarter(pa, pb):
         if pa >= 0 and pb >= 0:
@@ -137,11 +140,11 @@ class GMachine(object):
             return 3
         if pa >= 0 and pb < 0:
             return 4
-
+    
     def __adjust_circle(self, da, db, ra, rb, direction, pa, pb, ma, mb):
         r = math.sqrt(ra * ra + rb * rb)
         if r == 0:
-            raise GMachineException("circle radius is zero")
+            raise GMachineException("Circle radius is zero")
         sq = self.__quarter(-ra, -rb)
         if da == 0 and db == 0:  # full circle
             ea = da
@@ -181,10 +184,10 @@ class GMachine(object):
             elif (pq == 3 and q == 4) or (pq == 4 and q == 3):
                 is_raise = (pb + rb - r < 0)
             if is_raise:
-                raise GMachineException("out of effective area")
+                raise GMachineException("Out of effective area")
             pq = q
         return ea, eb
-
+    
     def _move_circular(self, delta, radius, velocity, direction):
         delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
                             1.0 / STEPPER_PULSES_PER_MM_Y,
@@ -243,8 +246,8 @@ class GMachine(object):
             hal.move(linear_gen)
         # save position
         self._position = self._position + circle_end + linear_delta
-
-    def safe_zero(self, x=True, y=True, z=True):
+    
+    def safe_zero(self, x = True, y = True, z = True):
         """ Move head to zero position safely.
         :param x: boolean, move X axis to zero
         :param y: boolean, move Y axis to zero
@@ -263,7 +266,7 @@ class GMachine(object):
         if z:
             d = Coordinates(0, 0, -self._position.z, 0)
             self._move_linear(d, MAX_VELOCITY_MM_PER_MIN_Z)
-
+    
     def position(self):
         """ Return current machine position (after the latest command)
             Note that hal might still be moving motors and in this case
@@ -273,37 +276,37 @@ class GMachine(object):
         """
         hal.join()
         return self._position
-
+    
     def plane(self):
         """ Return current plane for circular interpolation. This function for
             tests only.
             :return current plane.
         """
         return self._plane
-
+    
     def fan_state(self):
         """ Check if fan is on.
             :return True if fan is on, False otherwise.
         """
         return self._fan_state
-
+    
     def __get_target_temperature(self, heater):
         if heater not in self._heaters:
             return 0
         return self._heaters[heater].target_temperature()
-
+    
     def extruder_target_temperature(self):
         """ Return desired extruder temperature.
             :return Temperature in Celsius, 0 if disabled.
         """
         return self.__get_target_temperature(HEATER_EXTRUDER)
-
+    
     def bed_target_temperature(self):
         """ Return desired bed temperature.
             :return Temperature in Celsius, 0 if disabled.
         """
         return self.__get_target_temperature(HEATER_BED)
-
+    
     def do_command(self, gcode):
         """ Perform action.
         :param gcode: GCode object which represent one gcode line
@@ -312,7 +315,7 @@ class GMachine(object):
         if gcode is None:
             return None
         answer = None
-        logging.debug("got command " + str(gcode.params))
+        logging.debug("Got command " + str(gcode.params))
         # read command
         c = gcode.command()
         if c is None and gcode.has_coordinates():
@@ -332,9 +335,9 @@ class GMachine(object):
                               self._convertCoordinates)
         # check parameters
         if velocity < MIN_VELOCITY_MM_PER_MIN:
-            raise GMachineException("feed speed too low")
+            raise GMachineException("Feed speed too low")
         # select command and run it
-        if c == 'G0':  # rapid move
+        if c == 'G0' or c == 'G00':  # rapid move
             vl = max(MAX_VELOCITY_MM_PER_MIN_X,
                      MAX_VELOCITY_MM_PER_MIN_Y,
                      MAX_VELOCITY_MM_PER_MIN_Z,
@@ -359,20 +362,30 @@ class GMachine(object):
                     if v < vl:
                         vl = v
             self._move_linear(delta, vl)
-        elif c == 'G1':  # linear interpolation
+            if EXACT_STOP_ON:
+                hal.join()
+        elif c == 'G1' or c == 'G01':  # linear interpolation
             self._move_linear(delta, velocity)
-        elif c == 'G2':  # circular interpolation, clockwise
+            if EXACT_STOP_ON:
+                hal.join()
+        elif c == 'G2' or c == 'G02':  # circular interpolation, clockwise
             self._move_circular(delta, radius, velocity, CW)
-        elif c == 'G3':  # circular interpolation, counterclockwise
+            if EXACT_STOP_ON:
+                hal.join()
+        elif c == 'G3' or c == 'G03':  # circular interpolation, counterclockwise
             self._move_circular(delta, radius, velocity, CCW)
-        elif c == 'G4':  # delay in s
+            if EXACT_STOP_ON:
+                hal.join()
+        elif c == 'G4' or c == 'G04':  # delay in s
             if not gcode.has('P'):
                 raise GMachineException("P is not specified")
             pause = gcode.get('P', 0)
             if pause < 0:
-                raise GMachineException("bad delay")
+                raise GMachineException("Incorrect delay")
             hal.join()
             time.sleep(pause)
+        elif c == 'G9' or c == 'G09':  # Exact stop non-modal
+            raise GMachineException("Exact non-modal stop mode not implemented")
         elif c == 'G17':  # XY plane select
             self._plane = PLANE_XY
         elif c == 'G18':  # ZX plane select
@@ -384,15 +397,19 @@ class GMachine(object):
         elif c == 'G21':  # switch to mm
             self._convertCoordinates = 1.0
         elif c == 'G28':  # home
-            axises = gcode.has('X'), gcode.has('Y'), gcode.has('Z')
-            if axises == (False, False, False):
-                axises = True, True, True
-            self.safe_zero(*axises)
+            axes = gcode.has('X'), gcode.has('Y'), gcode.has('Z')
+            if axes == (False, False, False):
+                axes = True, True, True
+            self.safe_zero(*axes)
             hal.join()
-            if not hal.calibrate(*axises):
-                raise GMachineException("failed to calibrate")
+            if not hal.calibrate(*axes):
+                raise GMachineException("Failed to calibrate axes")
         elif c == 'G53':  # switch to machine coords
             self._local = Coordinates(0.0, 0.0, 0.0, 0.0)
+        elif c == 'G61':  # Exact stop modal ON
+            self.EXACT_STOP_ON = True
+        elif c == 'G64':  # Exact stop modal OFF
+            self.EXACT_STOP_ON = False
         elif c == 'G90':  # switch to absolute coords
             self._absoluteCoordinates = True
         elif c == 'G91':  # switch to relative coords
@@ -400,17 +417,17 @@ class GMachine(object):
         elif c == 'G92':  # switch to local coords
             if gcode.has_coordinates():
                 self._local = self._position - gcode.coordinates(
-                    Coordinates(self._position.x - self._local.x,
-                                self._position.y - self._local.y,
-                                self._position.z - self._local.z,
-                                self._position.e - self._local.e),
-                    self._convertCoordinates)
+                        Coordinates(self._position.x - self._local.x,
+                                    self._position.y - self._local.y,
+                                    self._position.z - self._local.z,
+                                    self._position.e - self._local.e),
+                        self._convertCoordinates)
             else:
                 self._local = self._position
         elif c == 'M3':  # spindle on
             spindle_rpm = gcode.get('S', self._spindle_rpm)
             if spindle_rpm < 0 or spindle_rpm > SPINDLE_MAX_RPM:
-                raise GMachineException("bad spindle speed")
+                raise GMachineException("Bad spindle speed")
             self._spindle(spindle_rpm)
             self._spindle_rpm = spindle_rpm
         elif c == 'M5':  # spindle off
@@ -429,12 +446,12 @@ class GMachine(object):
                 raise Exception("Unexpected heater command")
             wait = c == 'M109' or c == 'M190'
             if not gcode.has("S"):
-                raise GMachineException("temperature is not specified")
+                raise GMachineException("Temperature is not specified")
             t = gcode.get('S', 0)
             if ((heater == HEATER_EXTRUDER and t > EXTRUDER_MAX_TEMPERATURE) or
-                    (heater == HEATER_BED and t > BED_MAX_TEMPERATURE) or
-                    t < MIN_TEMPERATURE) and t != 0:
-                raise GMachineException("bad temperature")
+                (heater == HEATER_BED and t > BED_MAX_TEMPERATURE) or
+                t < MIN_TEMPERATURE) and t != 0:
+                raise GMachineException("Incorrect temperature")
             self._heat(heater, t, wait)
         elif c == 'M105':  # get temperature
             try:
@@ -446,7 +463,7 @@ class GMachine(object):
             except (IOError, OSError):
                 bt = None
             if et is None and bt is None:
-                raise GMachineException("can not measure temperature")
+                raise GMachineException("Cannot measure temperature")
             answer = "E:{} B:{}".format(et, bt)
         elif c == 'M106':  # fan control
             if gcode.get('S', 1) != 0:
@@ -466,13 +483,13 @@ class GMachine(object):
         # commands below are added just for compatibility
         elif c == 'M82':  # absolute mode for extruder
             if not self._absoluteCoordinates:
-                raise GMachineException("Not supported, use G90/G91")
+                raise GMachineException("Not supported, use G90/G91 instead")
         elif c == 'M83':  # relative mode for extruder
             if self._absoluteCoordinates:
-                raise GMachineException("Not supported, use G90/G91")
+                raise GMachineException("Not supported, use G90/G91 instead")
         else:
-            raise GMachineException("unknown command")
+            raise GMachineException("Unknown command {}".format(c))
         # save parameters on success
         self._velocity = velocity
-        logging.debug("position {}".format(self._position))
+        logging.debug("Position {}".format(self._position))
         return answer

@@ -2,10 +2,10 @@
 import os
 import sys
 import time
+from cnc.hal_raspberry import hal
 
 cnc_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(cnc_dir)
-from cnc.hal_raspberry import hal
 
 """
 This executable module is looking for PID coefficients.
